@@ -55,12 +55,12 @@ client.on('messageCreate', async (message) => {
       .setColor('#5865F2') // Sol kenar çizgisi rengi
       .setDescription(
         '# Fronzyy Spam Botu\n' +
-        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
+        '────────────────────────────────────────\n' +
         '## Nasıl kullanılır?\n\n' +
         '• **Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.\n\n' +
         '• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.\n\n' +
         '• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.\n\n' +
-        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
+        '────────────────────────────────────────\n' +
         `-# Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
       );
 
@@ -111,15 +111,35 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isModalSubmit() && interaction.customId === 'token_modal') {
     const token = interaction.fields.getTextInputValue('token_input').trim();
 
-    if (!userTokens.has(userId)) {
-      userTokens.set(userId, []);
-    }
-    
-    // Hesap tokeni olduğu için doğrulama yapmadan direkt listeye ekliyoruz
-    const maskedToken = `...${token.slice(-6)}`;
-    userTokens.get(userId).push({ token, name: `Hesap (${maskedToken})` });
+    await interaction.deferReply({ ephemeral: true });
 
-    await interaction.reply({ content: `✅ Token başarıyla eklendi!`, ephemeral: true });
+    try {
+      // Tokenin sahibinin adını (nickini) Discord API-dən öyrənirik
+      const userRes = await fetch('https://discord.com/api/v9/users/@me', {
+        headers: { 'Authorization': token }
+      });
+
+      if (!userRes.ok) {
+        return interaction.editReply({ content: `❌ Hata: Girilen token geçersiz veya devre dışı bırakılmış.` });
+      }
+
+      const userData = await userRes.json();
+      const accountName = userData.global_name || userData.username;
+
+      if (!userTokens.has(userId)) {
+        userTokens.set(userId, []);
+      }
+      
+      // Eyni token təkrar əlavə olunmasın deyə yoxlaya bilərik
+      const existingList = userTokens.get(userId);
+      if (!existingList.some(t => t.token === token)) {
+        existingList.push({ token, name: accountName });
+      }
+
+      await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${accountName}**` });
+    } catch (err) {
+      await interaction.editReply({ content: `❌ Token eklenirken bir hata oluştu.` });
+    }
   }
 
   // --- 3. SPAMI BAŞLAT BUTONU ---
@@ -137,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
         ...tokens.map((t, index) => ({
           label: t.name,
           value: index.toString(),
-          description: `Token ID: ...${t.token.slice(-6)}`
+          description: `Seçilen hesap: ${t.name}`
         }))
       ]);
 
