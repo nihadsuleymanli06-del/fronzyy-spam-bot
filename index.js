@@ -61,7 +61,7 @@ client.on('messageCreate', async (message) => {
         '• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.\n\n' +
         '• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.\n\n' +
         '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
-        `🔄 Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
+        `-# Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
       );
 
     const row = new ActionRowBuilder().addComponents(
