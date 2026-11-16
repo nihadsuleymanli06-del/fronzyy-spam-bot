@@ -8,7 +8,8 @@ import {
   ModalBuilder, 
   TextInputBuilder, 
   TextInputStyle, 
-  StringSelectMenuBuilder 
+  StringSelectMenuBuilder,
+  ActivityType 
 } from 'discord.js';
 import express from 'express';
 
@@ -39,6 +40,12 @@ const activeSpams = new Map();
 
 client.once('ready', () => {
   console.log(`Bot başarıyla giriş yaptı: ${client.user.tag}`);
+  
+  // Botun statusunu "powered by Fronzyy" olaraq təyin edirik
+  client.user.setActivity({
+    name: 'powered by Fronzyy',
+    type: ActivityType.Playing
+  });
 });
 
 // !panel-spam komutu (Yanıt olarak değil, doğrudan kanala gönderir)
