@@ -1,0 +1,14 @@
+{
+  "name": "discord-panel-bot",
+  "version": "1.0.0",
+  "description": "Discord Panel Botu",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.19.2"
+  }
+}
