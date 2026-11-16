@@ -62,12 +62,12 @@ client.on('messageCreate', async (message) => {
       .setColor('#2b2d31') // Sol kenar çizgisi rengi
       .setDescription(
         '# Fronzyy Spam Botu\n' +
-        '────────────────────────────────────────\n' +
+        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
         '## Nasıl kullanılır?\n\n' +
         '• **Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.\n\n' +
         '• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.\n\n' +
         '• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.\n\n' +
-        '────────────────────────────────────────\n' +
+        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
         `-# Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
       );
 
