@@ -109,25 +109,17 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- 2. TOKEN MODAL CEVABI ---
   if (interaction.isModalSubmit() && interaction.customId === 'token_modal') {
-    const token = interaction.fields.getTextInputValue('token_input');
+    const token = interaction.fields.getTextInputValue('token_input').trim();
 
-    const testClient = new Client({ intents: [GatewayIntentBits.Guilds] });
-    
-    try {
-      await testClient.login(token);
-      const accountName = testClient.user.tag;
-      testClient.destroy();
-
-      if (!userTokens.has(userId)) {
-        userTokens.set(userId, []);
-      }
-      
-      userTokens.get(userId).push({ token, name: accountName });
-
-      await interaction.reply({ content: `✅ Başarıyla eklendi! Hesap: **${accountName}**`, ephemeral: true });
-    } catch (error) {
-      await interaction.reply({ content: `❌ Hata: Girilen token geçersiz veya devre dışı bırakılmış.`, ephemeral: true });
+    if (!userTokens.has(userId)) {
+      userTokens.set(userId, []);
     }
+    
+    // Hesap tokeni olduğu için doğrulama yapmadan direkt listeye ekliyoruz
+    const maskedToken = `...${token.slice(-6)}`;
+    userTokens.get(userId).push({ token, name: `Hesap (${maskedToken})` });
+
+    await interaction.reply({ content: `✅ Token başarıyla eklendi!`, ephemeral: true });
   }
 
   // --- 3. SPAMI BAŞLAT BUTONU ---
@@ -153,7 +145,7 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.reply({ content: 'Spam yapmak istediğiniz hesabı seçin:', components: [row], ephemeral: true });
   }
 
-  // --- 4. HESAP SEÇİLDİKTEN SONRA KANAL VE SİNYAL TALEBİ ---
+  // --- 4. HESAP SEÇİLDİKTEN SONRA KANAL VE SÜRE TALEBİ ---
   if (interaction.isStringSelectMenu() && interaction.customId === 'select_account') {
     const selectedValue = interaction.values[0];
 
@@ -191,7 +183,7 @@ client.on('interactionCreate', async (interaction) => {
   // --- 5. SPAM BAŞLANGICI (MODAL SUBMIT) ---
   if (interaction.isModalSubmit() && interaction.customId.startsWith('spam_modal_')) {
     const selectedValue = interaction.customId.replace('spam_modal_', '');
-    const channelId = interaction.fields.getTextInputValue('channel_id');
+    const channelId = interaction.fields.getTextInputValue('channel_id').trim();
     const intervalSec = parseFloat(interaction.fields.getTextInputValue('spam_interval'));
     const spamText = interaction.fields.getTextInputValue('spam_message');
 
@@ -214,27 +206,28 @@ client.on('interactionCreate', async (interaction) => {
       activeSpams.set(userId, []);
     }
 
+    // Hesap tokenleri üzerinden Discord API'ye doğrudan mesaj isteği gönderiyoruz
     for (const tObj of targetTokens) {
-      const spamClient = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
-      
-      try {
-        await spamClient.login(tObj.token);
-        
-        const interval = setInterval(async () => {
-          try {
-            const channel = await spamClient.channels.fetch(channelId);
-            if (channel && channel.isTextBased()) {
-              await channel.send(spamText);
-            }
-          } catch (err) {
-            console.error(`Spam hatası (${tObj.name}):`, err.message);
-          }
-        }, intervalSec * 1000);
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': tObj.token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: spamText })
+          });
 
-        activeSpams.get(userId).push({ client: spamClient, interval });
-      } catch (err) {
-        console.error(`Token giriş hatası:`, err.message);
-      }
+          if (!response.ok) {
+            console.error(`Spam hatası (${tObj.name}): HTTP ${response.status}`);
+          }
+        } catch (err) {
+          console.error(`Spam bağlantı hatası (${tObj.name}):`, err.message);
+        }
+      }, intervalSec * 1000);
+
+      activeSpams.get(userId).push({ interval });
     }
   }
 
@@ -248,9 +241,6 @@ client.on('interactionCreate', async (interaction) => {
 
     for (const item of userSpams) {
       clearInterval(item.interval);
-      try {
-        item.client.destroy();
-      } catch (e) {}
     }
 
     activeSpams.set(userId, []);
