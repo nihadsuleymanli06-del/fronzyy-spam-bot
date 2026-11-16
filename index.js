@@ -41,20 +41,20 @@ client.once('ready', () => {
   console.log(`Bot başarıyla giriş yaptı: ${client.user.tag}`);
 });
 
-// !panel-spam komutu (Yanıt olarak değil, birbaşa kanala göndərir)
+// !panel-spam komutu (Yanıt olarak değil, doğrudan kanala gönderir)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   if (message.content === '!panel-spam') {
-    // Köhnə mesajı silirik (istəyə bağlı, təmiz görünməsi üçün)
     try { await message.delete(); } catch (e) {}
 
-    // Online istifadəçi sayını hesablayırıq (token əlavə etmiş unikal istifadəçilər)
+    // Online kullanıcı sayısı (token eklemiş benzersiz kullanıcılar)
     const onlineCount = userTokens.size;
 
     const embed = new EmbedBuilder()
-      .setTitle('# Fronzyy Spam Botu')
+      .setColor('#5865F2') // Sol kenar çizgisi rengi
       .setDescription(
+        '# Fronzyy Spam Botu\n' +
         '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
         '## Nasıl kullanılır?\n\n' +
         '• **Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.\n\n' +
@@ -62,8 +62,7 @@ client.on('messageCreate', async (message) => {
         '• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.\n\n' +
         '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
         `🔄 Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
-      )
-      .setColor('#5865F2');
+      );
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -259,5 +258,4 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Render Environment üzerinden gelen DISCORD_TOKEN ile başlatılır
 client.login(process.env.DISCORD_TOKEN);
