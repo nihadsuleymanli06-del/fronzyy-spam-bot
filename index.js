@@ -52,7 +52,7 @@ client.on('messageCreate', async (message) => {
     const onlineCount = userTokens.size;
 
     const embed = new EmbedBuilder()
-      .setColor('#5865F2') // Sol kenar çizgisi rengi
+      .setColor('#2b2d31') // Sol kenar çizgisi rengi (Discord tünd fon rəngi)
       .setDescription(
         '# Fronzyy Spam Botu\n' +
         '────────────────────────────────────────\n' +
@@ -114,7 +114,7 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      // Tokenin sahibinin adını (nickini) Discord API-dən öyrənirik
+      // Token sahibinin məlumatlarını API-dən çəkirik
       const userRes = await fetch('https://discord.com/api/v9/users/@me', {
         headers: { 'Authorization': token }
       });
@@ -125,18 +125,18 @@ client.on('interactionCreate', async (interaction) => {
 
       const userData = await userRes.json();
       const accountName = userData.global_name || userData.username;
+      const accountId = userData.id;
 
       if (!userTokens.has(userId)) {
         userTokens.set(userId, []);
       }
       
-      // Eyni token təkrar əlavə olunmasın deyə yoxlaya bilərik
       const existingList = userTokens.get(userId);
       if (!existingList.some(t => t.token === token)) {
-        existingList.push({ token, name: accountName });
+        existingList.push({ token, name: accountName, id: accountId });
       }
 
-      await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${accountName}**` });
+      await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${accountName} (${accountId})**` });
     } catch (err) {
       await interaction.editReply({ content: `❌ Token eklenirken bir hata oluştu.` });
     }
@@ -155,7 +155,7 @@ client.on('interactionCreate', async (interaction) => {
       .addOptions([
         { label: 'Bütün Hesaplar', value: 'all_accounts', description: 'Eklediğiniz bütün hesaplar spam yapacak' },
         ...tokens.map((t, index) => ({
-          label: t.name,
+          label: `${t.name} (${t.id})`,
           value: index.toString(),
           description: `Seçilen hesap: ${t.name}`
         }))
