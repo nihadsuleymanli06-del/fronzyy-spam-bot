@@ -41,20 +41,27 @@ client.once('ready', () => {
   console.log(`Bot başarıyla giriş yaptı: ${client.user.tag}`);
 });
 
-// !panel komutu
+// !panel-spam komutu (Yanıt olarak değil, birbaşa kanala göndərir)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  if (message.content === '!panel') {
+  if (message.content === '!panel-spam') {
+    // Köhnə mesajı silirik (istəyə bağlı, təmiz görünməsi üçün)
+    try { await message.delete(); } catch (e) {}
+
+    // Online istifadəçi sayını hesablayırıq (token əlavə etmiş unikal istifadəçilər)
+    const onlineCount = userTokens.size;
+
     const embed = new EmbedBuilder()
       .setTitle('# Fronzyy Spam Botu')
       .setDescription(
-        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
         '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
-        '**Nasıl kullanılır**\n\n' +
-        '**Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.\n\n' +
-        '**Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.\n\n' +
-        '**Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.'
+        '## Nasıl kullanılır?\n\n' +
+        '• **Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.\n\n' +
+        '• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.\n\n' +
+        '• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.\n\n' +
+        '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n' +
+        `🔄 Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`
       )
       .setColor('#5865F2');
 
@@ -75,7 +82,7 @@ client.on('messageCreate', async (message) => {
         .setStyle(ButtonStyle.Danger) // Kırmızı
     );
 
-    await message.reply({ embeds: [embed], components: [row] });
+    await message.channel.send({ embeds: [embed], components: [row] });
   }
 });
 
