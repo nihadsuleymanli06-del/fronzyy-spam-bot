@@ -52,7 +52,7 @@ client.on('messageCreate', async (message) => {
     const onlineCount = userTokens.size;
 
     const embed = new EmbedBuilder()
-      .setColor('#2b2d31') // Sol kenar çizgisi rengi (Discord tünd fon rəngi)
+      .setColor('#2b2d31') // Sol kenar çizgisi rengi
       .setDescription(
         '# Fronzyy Spam Botu\n' +
         '────────────────────────────────────────\n' +
@@ -114,7 +114,6 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      // Token sahibinin məlumatlarını API-dən çəkirik
       const userRes = await fetch('https://discord.com/api/v9/users/@me', {
         headers: { 'Authorization': token }
       });
@@ -124,8 +123,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const userData = await userRes.json();
-      const accountName = userData.global_name || userData.username;
-      const accountId = userData.id;
+      const globalName = userData.global_name || userData.username;
+      const username = userData.username;
 
       if (!userTokens.has(userId)) {
         userTokens.set(userId, []);
@@ -133,10 +132,10 @@ client.on('interactionCreate', async (interaction) => {
       
       const existingList = userTokens.get(userId);
       if (!existingList.some(t => t.token === token)) {
-        existingList.push({ token, name: accountName, id: accountId });
+        existingList.push({ token, name: globalName, username: username });
       }
 
-      await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${accountName} (${accountId})**` });
+      await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${globalName} (${username})**` });
     } catch (err) {
       await interaction.editReply({ content: `❌ Token eklenirken bir hata oluştu.` });
     }
@@ -155,7 +154,7 @@ client.on('interactionCreate', async (interaction) => {
       .addOptions([
         { label: 'Bütün Hesaplar', value: 'all_accounts', description: 'Eklediğiniz bütün hesaplar spam yapacak' },
         ...tokens.map((t, index) => ({
-          label: `${t.name} (${t.id})`,
+          label: `${t.name} (${t.username})`,
           value: index.toString(),
           description: `Seçilen hesap: ${t.name}`
         }))
@@ -226,7 +225,6 @@ client.on('interactionCreate', async (interaction) => {
       activeSpams.set(userId, []);
     }
 
-    // Hesap tokenleri üzerinden Discord API'ye doğrudan mesaj isteği gönderiyoruz
     for (const tObj of targetTokens) {
       const interval = setInterval(async () => {
         try {
