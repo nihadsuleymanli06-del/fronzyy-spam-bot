@@ -58,9 +58,6 @@ client.on('messageCreate', async (message) => {
   if (message.content === '!panel-spam') {
     try { await message.delete(); } catch (e) {}
 
-    // Online kullanıcı sayısı (token eklemiş benzersiz kullanıcılar)
-    const onlineCount = userTokens.size;
-
     const container = new ContainerBuilder()
       .setAccentColor(0x2b2d31)
       .addTextDisplayComponents(
@@ -79,30 +76,42 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent('• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Tümünü Kapat** : Size ait tokenlerdeki tüm spamlar durdurulur.')
+        new TextDisplayBuilder().setContent('• **Toplu Token Ekle** : Her satıra bir token yazarak birden fazla hesabı aynı anda eklersiniz.')
+      )
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent('• **Tümünü Durdur** : Size ait tokenlerdeki tüm spamlar durdurulur.')
       )
       .addSeparatorComponents(
         new SeparatorBuilder().setDivider(true)
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`-# Online: ${onlineCount} | Copyright © Developed by Fronzyy 2026`)
+        new TextDisplayBuilder().setContent(`-# Copyright © Developed by Fronzyy 2026`)
       );
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('start_spam')
         .setLabel('Spamı Başlat')
-        .setStyle(ButtonStyle.Success), // Yeşil
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('🪧'),
 
       new ButtonBuilder()
         .setCustomId('add_token')
         .setLabel('Token Ekle')
-        .setStyle(ButtonStyle.Success), // Yeşil
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('➕'),
+
+      new ButtonBuilder()
+        .setCustomId('add_bulk_token')
+        .setLabel('Toplu Token Ekle')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🗒️'),
 
       new ButtonBuilder()
         .setCustomId('stop_all')
-        .setLabel('Tümünü Kapat')
-        .setStyle(ButtonStyle.Danger) // Kırmızı
+        .setLabel('Tümünü Durdur')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
     );
 
     await message.channel.send({ 
@@ -134,7 +143,26 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.showModal(modal);
   }
 
-  // --- 2. TOKEN MODAL CEVABI ---
+  // --- 1.1. TOPLU TOKEN EKLE BUTONU ---
+  if (interaction.isButton() && interaction.customId === 'add_bulk_token') {
+    const modal = new ModalBuilder()
+      .setCustomId('bulk_token_modal')
+      .setTitle('Toplu Discord Token Ekle');
+
+    const tokenInput = new TextInputBuilder()
+      .setCustomId('bulk_token_input')
+      .setLabel('Discord Tokenlerini girin')
+      .setPlaceholder('Her satıra 1 token gelecek şekilde yazın')
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true);
+
+    const firstRow = new ActionRowBuilder().addComponents(tokenInput);
+    modal.addComponents(firstRow);
+
+    await interaction.showModal(modal);
+  }
+
+  // --- 2. TEK TOKEN MODAL CEVABI ---
   if (interaction.isModalSubmit() && interaction.customId === 'token_modal') {
     const token = interaction.fields.getTextInputValue('token_input').trim();
 
@@ -168,11 +196,60 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
+  // --- 2.1. TOPLU TOKEN MODAL CEVABI ---
+  if (interaction.isModalSubmit() && interaction.customId === 'bulk_token_modal') {
+    const rawInput = interaction.fields.getTextInputValue('bulk_token_input').trim();
+    const tokens = rawInput.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+
+    if (tokens.length === 0) {
+      return interaction.reply({ content: '❌ Geçerli token bulunamadı!', ephemeral: true });
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!userTokens.has(userId)) {
+      userTokens.set(userId, []);
+    }
+    const existingList = userTokens.get(userId);
+
+    let successCount = 0;
+    let failCount = 0;
+    let addedNames = [];
+
+    for (const token of tokens) {
+      if (existingList.some(t => t.token === token)) continue; // Artıq varsa keç
+
+      try {
+        const userRes = await fetch('https://discord.com/api/v9/users/@me', {
+          headers: { 'Authorization': token }
+        });
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          const globalName = userData.global_name || userData.username;
+          const username = userData.username;
+
+          existingList.push({ token, name: globalName, username: username });
+          addedNames.push(`${globalName} (${username})`);
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        failCount++;
+      }
+    }
+
+    await interaction.editReply({ 
+      content: `📦 **Toplu Token İşlemi Tamamlandı!**\n✅ Başarıyla eklenen: **${successCount}** hesap\n❌ Geçersiz/Eklenemeyen: **${failCount}**\n\n${addedNames.length > 0 ? 'Eklenenler:\n- ' + addedNames.join('\n- ') : ''}` 
+    });
+  }
+
   // --- 3. SPAMI BAŞLAT BUTONU ---
   if (interaction.isButton() && interaction.customId === 'start_spam') {
     const tokens = userTokens.get(userId);
     if (!tokens || tokens.length === 0) {
-      return interaction.reply({ content: '⚠️ Önce "Token Ekle" butonundan bir hesap eklemelisiniz!', ephemeral: true });
+      return interaction.reply({ content: '⚠️ Önce "Token Ekle" veya "Toplu Token Ekle" butonundan bir hesap eklemelisiniz!', ephemeral: true });
     }
 
     const selectMenu = new StringSelectMenuBuilder()
@@ -276,7 +353,7 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // --- 6. TÜMÜNÜ KAPAT BUTONU ---
+  // --- 6. TÜMÜNÜ DURDUR BUTONU ---
   if (interaction.isButton() && interaction.customId === 'stop_all') {
     const userSpams = activeSpams.get(userId);
     
