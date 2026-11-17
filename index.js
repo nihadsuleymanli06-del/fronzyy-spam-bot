@@ -70,7 +70,7 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent('## **Nasıl kullanılır?**')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.')
+        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Belirlediğiniz kanal ve saniye aralığında spam yapmanızı sağlar.')
       )
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent('• **Token Ekle** : Tekli token eklemenizi sağlar.')
@@ -124,7 +124,7 @@ client.on('messageCreate', async (message) => {
         .setCustomId('stop_all')
         .setLabel('Tümünü Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('⏹️')
+        .setEmoji('🗑️')
     );
 
     await message.channel.send({ 
