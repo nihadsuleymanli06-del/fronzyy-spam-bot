@@ -70,16 +70,19 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent('## **Nasıl kullanılır?**')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Eğer token eklediyseniz tuşa basıldığında kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.')
+        new TextDisplayBuilder().setContent('• **Spamı Başlat** : Kanal ID-sini girin ve saniye aralığını yazarak spamı başlatır.')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Token Ekle** : Tokeni yazarak hesabınızı eklersiniz.')
+        new TextDisplayBuilder().setContent('• **Token Ekle** : Tekli token eklemenizi sağlar.')
       )
       .addTextDisplayComponents(
         new TextDisplayBuilder().setContent('• **Toplu Token Ekle** : Her satıra bir token yazarak birden fazla hesabı aynı anda eklersiniz.')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Tümünü Durdur** : Size ait tokenlerdeki tüm spamlar durdurulur.')
+        new TextDisplayBuilder().setContent('• **Token Sil** : Eklediğiniz tokenleri tek tek veya tümünü silebilirsiniz.')
+      )
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent('• **Tümünü Durdur** : Aktif olan tüm spam süreçlerini durdurur.')
       )
       .addSeparatorComponents(
         new SeparatorBuilder().setDivider(true)
@@ -88,7 +91,8 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent(`-# Copyright © Developed by Fronzyy 2026`)
       );
 
-    const row = new ActionRowBuilder().addComponents(
+    // Birinci sıra düymələr (Spamı Başlat, Token Ekle, Toplu Token Ekle)
+    const row1 = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('start_spam')
         .setLabel('Spamı Başlat')
@@ -105,17 +109,26 @@ client.on('messageCreate', async (message) => {
         .setCustomId('add_bulk_token')
         .setLabel('Toplu Token Ekle')
         .setStyle(ButtonStyle.Primary)
-        .setEmoji('🗒️'),
+        .setEmoji('🗒️')
+    );
+
+    // İkinci sıra düymələr (Token Sil, Tümünü Durdur)
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('remove_token_panel')
+        .setLabel('Token Sil')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️'),
 
       new ButtonBuilder()
         .setCustomId('stop_all')
         .setLabel('Tümünü Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
+        .setEmoji('⏹️')
     );
 
     await message.channel.send({ 
-      components: [container, row],
+      components: [container, row1, row2],
       flags: MessageFlags.IsComponentsV2 
     });
   }
@@ -160,6 +173,30 @@ client.on('interactionCreate', async (interaction) => {
     modal.addComponents(firstRow);
 
     await interaction.showModal(modal);
+  }
+
+  // --- 1.2. TOKEN SİL PANELİ (SEÇİM MENÜSÜ) ---
+  if (interaction.isButton() && interaction.customId === 'remove_token_panel') {
+    const tokens = userTokens.get(userId);
+    if (!tokens || tokens.length === 0) {
+      return interaction.reply({ content: '⚠️ Silinecek kayıtlı hesabınız bulunmuyor!', ephemeral: true });
+    }
+
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('select_remove_account')
+      .setPlaceholder('Silmek istediğiniz hesabı seçin...')
+      .addOptions([
+        { label: 'Bütün Tokenleri Sil', value: 'clear_all_tokens', description: 'Size ait olan bütün tokenleri sistemden siler', emoji: '🗑️' },
+        ...tokens.map((t, index) => ({
+          label: `${t.name} (${t.username})`,
+          value: index.toString(),
+          description: `Bu hesabı sil`,
+          emoji: '❌'
+        }))
+      ]);
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+    await interaction.reply({ content: 'Silmek istediğiniz hesabı veya seçeneği belirleyin:', components: [row], ephemeral: true });
   }
 
   // --- 2. TEK TOKEN MODAL CEVABI ---
@@ -217,7 +254,7 @@ client.on('interactionCreate', async (interaction) => {
     let addedNames = [];
 
     for (const token of tokens) {
-      if (existingList.some(t => t.token === token)) continue; // Artıq varsa keç
+      if (existingList.some(t => t.token === token)) continue;
 
       try {
         const userRes = await fetch('https://discord.com/api/v9/users/@me', {
@@ -243,6 +280,25 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.editReply({ 
       content: `📦 **Toplu Token İşlemi Tamamlandı!**\n✅ Başarıyla eklenen: **${successCount}** hesap\n❌ Geçersiz/Eklenemeyen: **${failCount}**\n\n${addedNames.length > 0 ? 'Eklenenler:\n- ' + addedNames.join('\n- ') : ''}` 
     });
+  }
+
+  // --- 2.2. TOKEN SİLME SEÇİM İŞLEMİ ---
+  if (interaction.isStringSelectMenu() && interaction.customId === 'select_remove_account') {
+    const selectedValue = interaction.values[0];
+    const tokens = userTokens.get(userId);
+
+    if (!tokens) {
+      return interaction.reply({ content: '❌ Kayıtlı hesabınız bulunmuyor.', ephemeral: true });
+    }
+
+    if (selectedValue === 'clear_all_tokens') {
+      userTokens.set(userId, []);
+      return interaction.reply({ content: '🗑️ Size ait olan bütün tokenler başarıyla silindi!', ephemeral: true });
+    } else {
+      const index = parseInt(selectedValue);
+      const removedAccount = tokens.splice(index, 1)[0];
+      return interaction.reply({ content: `❌ Başarıyla silindi: **${removedAccount.name} (${removedAccount.username})**`, ephemeral: true });
+    }
   }
 
   // --- 3. SPAMI BAŞLAT BUTONU ---
