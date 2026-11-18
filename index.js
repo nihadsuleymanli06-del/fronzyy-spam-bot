@@ -146,7 +146,7 @@ client.on('messageCreate', async (message) => {
         .setCustomId('stop_all')
         .setLabel('Tümünü Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('⏹️')
+        .setEmoji('🗑️')
     );
 
     await message.channel.send({ 
