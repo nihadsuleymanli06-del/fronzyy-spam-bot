@@ -165,7 +165,7 @@ client.on('messageCreate', async (message) => {
         .setCustomId('stop_spam_panel')
         .setLabel('Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('⏹️')
+        .setEmoji('🗑️')
     );
 
     await message.channel.send({ 
