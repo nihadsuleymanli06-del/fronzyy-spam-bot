@@ -165,7 +165,7 @@ client.on('messageCreate', async (message) => {
         .setCustomId('stop_spam_panel')
         .setLabel('Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
+        .setEmoji('⏹️')
     );
 
     await message.channel.send({ 
@@ -227,7 +227,7 @@ client.on('interactionCreate', async (interaction) => {
       .setCustomId('select_remove_account')
       .setPlaceholder('Silmek istediğiniz hesabı seçin...')
       .addOptions([
-        { label: 'Bütün Tokenleri Sil', value: 'clear_all_tokens', description: 'Size ait olan bütün tokenleri sistemden siler', emoji: '🗑️' },
+        { label: 'Bütün Tokenleri Sil', value: 'clear_all_tokens', description: 'Size ait olan bütün tokenleri sistemden siler', emoji: '❌' },
         ...tokens.map((t, index) => ({
           label: `${t.name} (${t.username})`,
           value: index.toString(),
@@ -470,7 +470,6 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: 'ℹ️ Aktif spam süreciniz bulunmuyor.', ephemeral: true });
     }
 
-    // Eyni hesabın birdən çox aktiv spamı ola biləcəyi üçün unikal hesabları çıxarırıq
     const uniqueAccounts = [];
     const seenTokens = new Set();
     for (const sp of userSpams) {
@@ -484,12 +483,12 @@ client.on('interactionCreate', async (interaction) => {
       .setCustomId('select_stop_account')
       .setPlaceholder('Spamı durdurmak istediğiniz hesabı seçin...')
       .addOptions([
-        { label: 'Bütün Hesaplar', value: 'all_accounts', description: 'Bütün hesaplardaki aktif spamları durdurur', emoji: '🛑' },
+        { label: 'Bütün Hesaplar', value: 'all_accounts', description: 'Bütün hesaplardaki aktif spamları durdurur', emoji: '❌' },
         ...uniqueAccounts.map((sp) => ({
           label: `${sp.name} (${sp.username})`,
           value: sp.token,
           description: `Bu hesaptaki spamı durdur (Kanal: ${sp.channelId})`,
-          emoji: '⏹️'
+          emoji: '❌'
         }))
       ]);
 
