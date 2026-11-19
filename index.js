@@ -81,11 +81,9 @@ client.on('messageCreate', async (message) => {
     // Səlahiyyəti yoxdursa
     if (message.author.id !== OWNER_ID) {
       try {
-        // Yazılan mesajı silirik
         await message.delete();
       } catch (e) {}
 
-      // Xəbərdarlıq mesajı göndəririk və 5 saniyə sonra silirik
       try {
         const warningMsg = await message.channel.send({ 
           content: `❌ <@${message.author.id}> Bu komutu sadece yönetici kullanabilir.` 
@@ -93,7 +91,7 @@ client.on('messageCreate', async (message) => {
         
         setTimeout(async () => {
           try { await warningMsg.delete(); } catch (err) {}
-        }, 5000); // 5000 millisaniyə = 5 saniyə
+        }, 5000);
       } catch (err) {}
 
       return;
@@ -125,7 +123,7 @@ client.on('messageCreate', async (message) => {
         new TextDisplayBuilder().setContent('• **Token Sil** : Eklediğiniz tokenleri tek tek veya tümünü silebilirsiniz.')
       )
       .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent('• **Tümünü Durdur** : Aktif olan tüm spam süreçlerini durdurur.')
+        new TextDisplayBuilder().setContent('• **Durdur** : Seçtiğiniz hesaptaki veya tüm hesaplardaki aktif spam süreçlerini durdurur.')
       )
       .addSeparatorComponents(
         new SeparatorBuilder().setDivider(true)
@@ -155,7 +153,7 @@ client.on('messageCreate', async (message) => {
         .setEmoji('🗒️')
     );
 
-    // İkinci sıra düymələr (Token Sil, Tümünü Durdur)
+    // İkinci sıra düymələr (Token Sil, Durdur)
     const row2 = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('remove_token_panel')
@@ -164,10 +162,10 @@ client.on('messageCreate', async (message) => {
         .setEmoji('🗑️'),
 
       new ButtonBuilder()
-        .setCustomId('stop_all')
-        .setLabel('Tümünü Durdur')
+        .setCustomId('stop_spam_panel')
+        .setLabel('Durdur')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
+        .setEmoji('⏹️')
     );
 
     await message.channel.send({ 
@@ -454,24 +452,89 @@ client.on('interactionCreate', async (interaction) => {
         }
       }, intervalSec * 1000);
 
-      activeSpams.get(userId).push({ interval });
+      activeSpams.get(userId).push({ 
+        interval, 
+        token: tObj.token, 
+        name: tObj.name, 
+        username: tObj.username,
+        channelId
+      });
     }
   }
 
-  // --- 6. TÜMÜNÜ DURDUR BUTONU ---
-  if (interaction.isButton() && interaction.customId === 'stop_all') {
+  // --- 6. DURDUR BUTONU (SEÇİM MENÜSÜ) ---
+  if (interaction.isButton() && interaction.customId === 'stop_spam_panel') {
     const userSpams = activeSpams.get(userId);
     
     if (!userSpams || userSpams.length === 0) {
       return interaction.reply({ content: 'ℹ️ Aktif spam süreciniz bulunmuyor.', ephemeral: true });
     }
 
-    for (const item of userSpams) {
-      clearInterval(item.interval);
+    // Eyni hesabın birdən çox aktiv spamı ola biləcəyi üçün unikal hesabları çıxarırıq
+    const uniqueAccounts = [];
+    const seenTokens = new Set();
+    for (const sp of userSpams) {
+      if (!seenTokens.has(sp.token)) {
+        seenTokens.add(sp.token);
+        uniqueAccounts.push(sp);
+      }
     }
 
-    activeSpams.set(userId, []);
-    await interaction.reply({ content: '🛑 Hesaplarınızdaki bütün aktif spamlar durduruldu.', ephemeral: true });
+    const selectMenu = new StringSelectMenuBuilder()
+      .setCustomId('select_stop_account')
+      .setPlaceholder('Spamı durdurmak istediğiniz hesabı seçin...')
+      .addOptions([
+        { label: 'Bütün Hesaplar', value: 'all_accounts', description: 'Bütün hesaplardaki aktif spamları durdurur', emoji: '🛑' },
+        ...uniqueAccounts.map((sp) => ({
+          label: `${sp.name} (${sp.username})`,
+          value: sp.token,
+          description: `Bu hesaptaki spamı durdur (Kanal: ${sp.channelId})`,
+          emoji: '⏹️'
+        }))
+      ]);
+
+    const row = new ActionRowBuilder().addComponents(selectMenu);
+    await interaction.reply({ content: 'Spamını durdurmak istediğiniz hesabı seçin:', components: [row], ephemeral: true });
+  }
+
+  // --- 6.1. HESAP SEÇİLDİKTƏN SONRA SPAMI DAYANDIRMA ---
+  if (interaction.isStringSelectMenu() && interaction.customId === 'select_stop_account') {
+    const selectedValue = interaction.values[0];
+    const userSpams = activeSpams.get(userId);
+
+    if (!userSpams || userSpams.length === 0) {
+      return interaction.reply({ content: 'ℹ️ Aktif spam süreciniz bulunmuyor.', ephemeral: true });
+    }
+
+    if (selectedValue === 'all_accounts') {
+      for (const item of userSpams) {
+        clearInterval(item.interval);
+      }
+      activeSpams.set(userId, []);
+      return interaction.reply({ content: '🛑 Hesaplarınızdaki bütün aktif spamlar durduruldu.', ephemeral: true });
+    } else {
+      const remainingSpams = [];
+      let stoppedCount = 0;
+      let stoppedAccountName = '';
+
+      for (const item of userSpams) {
+        if (item.token === selectedValue) {
+          clearInterval(item.interval);
+          stoppedCount++;
+          stoppedAccountName = `${item.name} (${item.username})`;
+        } else {
+          remainingSpams.push(item);
+        }
+      }
+
+      activeSpams.set(userId, remainingSpams);
+      return interaction.reply({ 
+        content: stoppedCount > 0 
+          ? `⏹️ **${stoppedAccountName}** hesabındaki spam durduruldu.` 
+          : 'ℹ️ Bu hesap için aktif spam bulunamadı.', 
+        ephemeral: true 
+      });
+    }
   }
 });
 
